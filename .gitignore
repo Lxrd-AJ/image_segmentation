@@ -1,5 +1,2 @@
-cityscapes_data/cityscapesScript
-cityscapes_data/gtFine/test
-cityscapes_data/gtFine/val
-cityscapes_data/leftImg8bit/test
-cityscapes_data/leftImg8bit/val 
+cityscapes_data/
+dstl-satellite-data/ 
