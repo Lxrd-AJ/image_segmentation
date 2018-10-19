@@ -5,7 +5,7 @@ import json
 import cv2
 import matplotlib.pyplot as plt 
 import random 
-import cityscapes_labels
+from .cityscapes_labels import assureSingleInstanceName
 from PIL import Image
 from pprint import pprint
 from collections import defaultdict
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         # Show the current segment in the original image
         # x = show_mask_portion(res, segment)
         # Image.fromarray(x).show()
-        print("Category: {:}".format(cityscapes_labels.assureSingleInstanceName(cat)))
+        print("Category: {:}".format(assureSingleInstanceName(cat)))
         
     #     if prev_segment is not None:
     #         pass

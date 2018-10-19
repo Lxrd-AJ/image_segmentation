@@ -1,12 +1,13 @@
 import os, random, torch
 import numpy as np 
 import cv2
-import cityscapes_etl
-import cityscapes_labels
+from . import cityscapes_etl
+from . import cityscapes_labels
 import random 
 from torchvision import transforms, utils
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image 
+from pprint import pprint
 
 class ToTensor(object):
     def __call__(self, sample):
@@ -17,6 +18,17 @@ class ToTensor(object):
         image = torch.from_numpy( image.transpose((2,0,1)) )
         segmented_image = torch.from_numpy( segmented_image.transpose((2,0,1)) )
         segments_ = torch.from_numpy( np.array(segments) )
+        return {"image": image, "segments": segments_, "segmented_image": segmented_image }
+
+class Rescale(object):
+    def __call__(self, sample):
+        image, segments, segmented_image = sample["image"], sample["segments"], sample["segmented_image"]
+
+        # segments should be a python list of numpy arrays 
+        segments_ = []
+        for segment in segments:
+            segments_.append(segment/255)
+
         return {"image": image, "segments": segments_, "segmented_image": segmented_image }
 
 
@@ -94,3 +106,8 @@ if __name__ == "__main__":
     rand_mask = random.randint(0, len_segments)
     Image.fromarray(sample["segments"][rand_mask].numpy()).show()
     print("{:} mask being shown".format(labels[rand_mask]))
+
+    print("Rescaled segments")
+    sample = Rescale()(sample)
+    torch.set_printoptions(threshold=3000000, linewidth=100)
+    pprint( sample["segments"][rand_mask] )
