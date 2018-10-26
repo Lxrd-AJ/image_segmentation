@@ -64,7 +64,8 @@ class ToNumpy(object):
     Transforms a tensor of rank 3 to an image format for display
     """
     def __call__(self, torch_image ):
-        return torch_image.numpy().transpose((1,2,0))
+        res = torch_image.numpy().transpose((1,2,0))
+        return np.array(res, dtype=np.uint8)
 
 class CityscapesDataset(Dataset):
     def __init__(self, train_dir, ann_dir, type, labels, transform):
@@ -80,6 +81,7 @@ class CityscapesDataset(Dataset):
         item = {}
         sample = self.df.iloc[idx]
         item["image"] = np.array(Image.open(sample["img_url"]))
+        # NB: The colored segmented images have 4 channels i.e RGBA
         item["segmented_image"] = np.array(Image.open(sample["color_seg_url"]))
         masks = []
         cat_segments = cityscapes_etl.parse_annotation_file( sample["ann_polygon_url"])
