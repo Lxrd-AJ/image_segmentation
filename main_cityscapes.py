@@ -9,37 +9,37 @@ import cv2
 import json
 from torch.utils.data import DataLoader
 from model.unet_model import UNet
-from ETL.cityscapes_dataset import CityscapesDataset, ToTensor, ToNumpy, Rescale
-from ETL.cityscapes_labels import name2label
+from ETL.cityscapes_dataset import CityscapesDataset, ToTensor, ToNumpy, Rescale, Resize
+from ETL.cityscapes_labels import name2label, labels
 from torch.autograd import Variable  
 from torchvision import transforms, utils
 
 
 # TODO(AJ): Verify that there are no duplicate labels in the cityscape labels e.g bicycle and bicycle_group
-# TODO(AJ)!!: Might need to write a new operation to resize the data and its labels if it is too big to train on
-# TODO(AJ): Add Tensorboard support for visualisations
+# TODO(AJ): Add Tensorboard support for visualisations, Try visdom
 DATA_DIR = "./cityscapes_data"
 ANNOTATION_DATA_DIR = DATA_DIR + "/gtFine"
 IMG_DATA_DIR = DATA_DIR + "/leftImg8bit"
 TRAIN_DIR_IMG = IMG_DATA_DIR + "/train"
 TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/train"
 
-_NUM_EPOCHS_ = 50
+_NUM_EPOCHS_ = 1
 _NUM_CHANNELS_= 3
-_IMAGE_SIZE_ = 250 #Ideal image size should be 3000 for final training using all channels
+_IMAGE_SIZE_ = (500,500) 
 _COMPUTE_DEVICE_ = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 torch.set_default_tensor_type(torch.FloatTensor)
 
 if __name__ == "__main__":
-    #TODO(AJ): Ensure that the order of the labels never change across runs
-    labels = list(name2label.keys())
+    categories = [label.name for label in labels]#list(name2label.keys())
+    print("Training categories:")
+    print(categories)
     cityscapes_dataset = CityscapesDataset(
         TRAIN_DIR_IMG, TRAIN_DIR_ANN, "gtFine", 
-        labels, transform=transforms.Compose([Rescale(), ToTensor()]))
-    trainloader = DataLoader(cityscapes_dataset, batch_size=2, shuffle=True, num_workers=0)
+        categories, transform=transforms.Compose([Resize(_IMAGE_SIZE_), Rescale(), ToTensor()]))
+    trainloader = DataLoader(cityscapes_dataset, batch_size=5, shuffle=True, num_workers=4)
 
-    model = UNet( n_classes=len(labels), in_channels=_NUM_CHANNELS_ )
+    model = UNet( n_classes=len(categories), in_channels=_NUM_CHANNELS_ )
     if torch.cuda.device_count() >= 1:
         print("Training model on ", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
@@ -56,10 +56,11 @@ if __name__ == "__main__":
         epoch_data[epoch] = {}
         for i, data in enumerate(trainloader,0):
             inputs = data["image"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor) #The images are returned as ByteTensor
-            labels = data["segments"].to(_COMPUTE_DEVICE_)
+            labels = data["segments"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor)
             #TODO(AJ)!!: Fix the bug in `toNumpy` operation
             # true_segments = toNumpy(data["segmented_image"]) #for your eyes only
-
+            #TODO(AJ): Visualise the outputs of the network (log to visdom)
+            #TODO(AJ): Visualise the weights of the network (log to visdom/tensorboard etc)
             optimizer.zero_grad()#zero the parameter gradients
 
             # forward pass + backward pass + optimisation
@@ -69,12 +70,15 @@ if __name__ == "__main__":
             optimizer.step()
 
             epoch_loss = loss.item()
-            print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
+            # print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
         epoch_data[epoch]["loss"] = epoch_loss
-        print("[Epoch %d] loss: %.3f" % (epoch+1, epoch_loss))
+        #TODO: Save the model on every epoch
+        print("[Epoch %d] loss: %.2f" % (epoch+1, epoch_loss))
     print("Training complete .....")
 
     with open("epoch_data.json",'w') as file:
         json.dump(epoch_data, file)
 
     # TODO(AJ) Test the network
+
+    # TODO(AJ): Utilise the trained network to perform object detection

@@ -69,6 +69,7 @@ def show_mask_portion(image, mask):
     mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
     return cv2.bitwise_and(image, mask)    
 
+# TODO(AJ): Use PIL to blend the images, see https://pillow.readthedocs.io/en/3.1.x/reference/Image.html#PIL.Image.composite 
 def blend_img_mask( image, mask ):
     # mask[mask==255] = 200
     color_maps = [

@@ -31,6 +31,33 @@ class Rescale(object):
 
         return {"image": image, "segments": segments_, "segmented_image": segmented_image }
 
+class Resize(object):
+    def __init__(self, img_size):
+        self.img_size = img_size
+
+    def __resize(self, img):
+        #TODO(AJ): If img_size is 0, just return image as it is
+        img = Image.fromarray(img)
+        img.thumbnail(self.img_size, Image.ANTIALIAS)
+        return np.array(img)
+
+    """
+    Assumes the given sample contains numpy arrays and `img_size` is a tuple 
+    """
+    def __call__(self, sample):
+        image, segments, segmented_image = sample["image"], sample["segments"], sample["segmented_image"]
+
+        image = self.__resize(image)
+
+        segments_ = []
+        for segment in segments:
+            segment = self.__resize(segment)
+            segments_.append(segment)
+
+        segmented_image = self.__resize(segmented_image)
+
+        return {"image": image, "segments": segments_, "segmented_image": segmented_image }
+
 
 class ToNumpy(object):
     """
@@ -82,32 +109,40 @@ if __name__ == "__main__":
     labels = list(cityscapes_labels.name2label.keys())
     cityscapes_dataset = CityscapesDataset(
         TRAIN_DIR_IMG, TRAIN_DIR_ANN, "gtFine", 
-        labels, transform=transforms.Compose([ToTensor()]))
+        labels, transform=None) # transforms.Compose([ToTensor()])
 
     rand_idx = random.randint(0, len(cityscapes_dataset))
     sample = cityscapes_dataset[rand_idx]
 
+    size = (500,500)
+
     # Using numpy as the underlying datatype
-    # Image.fromarray(sample["image"]).show()
-    # Image.fromarray(sample["segmented_image"]).show()
-    # print("{:} masks available".format(len(sample["segments"])))
-    # # Random masks
-    # rand_mask = random.randint(0, len(sample["segments"]))
-    # Image.fromarray(sample["segments"][rand_mask]).show()
-    # print("{:} mask being shown".format(labels[rand_mask]))
+    x = Image.fromarray(sample["image"])
+    x.thumbnail(size, Image.ANTIALIAS)
+    x.show()
+    y = Image.fromarray(sample["segmented_image"])
+    y.thumbnail(size, Image.ANTIALIAS)
+    y.show()
+    print("{:} masks available".format(len(sample["segments"])))
+    # Random masks
+    rand_mask = random.randint(0, len(sample["segments"]))
+    z = Image.fromarray(sample["segments"][rand_mask])
+    z.thumbnail(size, Image.ANTIALIAS)
+    z.show()
+    print("{:} mask being shown".format(labels[rand_mask]))
     
     # Using tensors as the underlying datatype
-    toNumpy = ToNumpy()
-    Image.fromarray( toNumpy(sample["image"]) ).show()
-    Image.fromarray( toNumpy(sample["segmented_image"]) ).show()
-    len_segments = sample["segments"].shape[0]
-    print("{:} masks available".format(len_segments))
-    # Random masks
-    rand_mask = random.randint(0, len_segments)
-    Image.fromarray(sample["segments"][rand_mask].numpy()).show()
-    print("{:} mask being shown".format(labels[rand_mask]))
+    # toNumpy = ToNumpy()
+    # Image.fromarray( toNumpy(sample["image"]) ).show()
+    # Image.fromarray( toNumpy(sample["segmented_image"]) ).show()
+    # len_segments = sample["segments"].shape[0]
+    # print("{:} masks available".format(len_segments))
+    # # Random masks
+    # rand_mask = random.randint(0, len_segments)
+    # Image.fromarray(sample["segments"][rand_mask].numpy()).show()
+    # print("{:} mask being shown".format(labels[rand_mask]))
 
-    print("Rescaled segments")
-    sample = Rescale()(sample)
-    torch.set_printoptions(threshold=3000000, linewidth=100)
-    pprint( sample["segments"][rand_mask] )
+    # print("Rescaled segments")
+    # sample = Rescale()(sample)
+    # torch.set_printoptions(threshold=3000000, linewidth=100)
+    # pprint( sample["segments"][rand_mask] )

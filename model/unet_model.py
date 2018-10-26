@@ -12,22 +12,22 @@ class UNetConv2D( nn.Module ):
         self.kernel_size = 3
         if batch_norm:
             self.conv1 = nn.Sequential(
-                            nn.Conv2d(in_size,out_size,self.kernel_size),
+                            nn.Conv2d(in_size,out_size,self.kernel_size,1,0),
                             nn.BatchNorm2d(out_size),
                             nn.ReLU()
             )
             self.conv2 = nn.Sequential(
-                            nn.Conv2d(out_size, out_size,self.kernel_size),
+                            nn.Conv2d(out_size, out_size,self.kernel_size,1,0),
                             nn.BatchNorm2d(out_size),
                             nn.ReLU()
             )
         else:
             self.conv1 = nn.Sequential(
-                            nn.Conv2d(in_size, out_size, self.kernel_size),
+                            nn.Conv2d(in_size, out_size, self.kernel_size,1,0),
                             nn.ReLU()
             )
             self.conv2 = nn.Sequential(
-                            nn.Conv2d(out_size, out_size, self.kernel_size),
+                            nn.Conv2d(out_size, out_size, self.kernel_size,1,0),
                             nn.ReLU()
             )
         
@@ -51,10 +51,11 @@ class UNetUpConv2D( nn.Module ):
     def forward(self, inputs1, inputs2):
         outputs2 = self.up_conv(inputs2)
         # Make `outputs1` equal sizes with `outputs2`
-        offset = outputs2.size()[2] - inputs1.size()[2]        
-        # padding = 2 * [offset // 2, offset // 2] 
-        padding = 2 * [offset // 2, int(offset / 2)]
-        outputs1 = F.pad(inputs1, padding)
+        offset = outputs2.size()[2] - inputs1.size()[2]
+        padding = 2 * [offset // 2, offset // 2]
+        # outputs1 = F.pad(inputs1, padding)
+        size = tuple(outputs2.size()[2:])
+        outputs1 = F.interpolate( inputs1, size )
         return self.conv( torch.cat([outputs1,outputs2],1) )
 
 
