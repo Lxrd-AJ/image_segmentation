@@ -2,3 +2,7 @@ torchvision
 Shapely
 tifffile
 scikit-learn
+matplotlib
+psutil
+pandas
+opencv-python

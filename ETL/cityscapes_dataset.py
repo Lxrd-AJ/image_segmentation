@@ -71,7 +71,7 @@ class CityscapesDataset(Dataset):
     def __init__(self, train_dir, ann_dir, type, labels, transform):
         self.df = cityscapes_etl.build_index(train_dir, ann_dir, type )
         self.labels = labels
-        self.transform = transform
+        self.transform = transform         
 
     def __len__(self):
         return len(self.df.index)
