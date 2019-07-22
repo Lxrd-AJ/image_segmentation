@@ -9,6 +9,9 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image 
 from pprint import pprint
 
+# class Normalize(object):
+#     #TODO: Add a normalisation operation
+
 class ToTensor(object):
     def __call__(self, sample):
         image, segments, segmented_image = sample["image"], sample["segments"], sample["segmented_image"]
@@ -71,7 +74,7 @@ class CityscapesDataset(Dataset):
     def __init__(self, train_dir, ann_dir, type, labels, transform):
         self.df = cityscapes_etl.build_index(train_dir, ann_dir, type )
         self.labels = labels
-        self.transform = transform         
+        self.transform = transform             
 
     def __len__(self):
         return len(self.df.index)

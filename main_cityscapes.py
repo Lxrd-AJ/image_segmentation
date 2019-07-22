@@ -52,7 +52,7 @@ IMG_DATA_DIR = DATA_DIR + "/leftImg8bit"
 TRAIN_DIR_IMG = IMG_DATA_DIR + "/train"
 TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/train"
 
-_NUM_EPOCHS_ = 50
+_NUM_EPOCHS_ = 10
 _NUM_CHANNELS_= 3
 _IMAGE_SIZE_ = (400,400) 
 _COMPUTE_DEVICE_ = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -65,8 +65,11 @@ if __name__ == "__main__":
     print(categories)
     cityscapes_dataset = CityscapesDataset(
         TRAIN_DIR_IMG, TRAIN_DIR_ANN, "gtFine", 
-        categories, transform=transforms.Compose([Resize(_IMAGE_SIZE_), Rescale(), ToTensor()]))
-    trainloader = DataLoader(cityscapes_dataset, batch_size=10, shuffle=True, num_workers=4)
+        categories, transform=transforms.Compose([
+            Resize(_IMAGE_SIZE_), Rescale(), ToTensor(),
+            #TODO: Normalise the input image
+            ]))
+    trainloader = DataLoader(cityscapes_dataset, batch_size=5, shuffle=True, num_workers=4)
 
     model = UNet( n_classes=len(categories), in_channels=_NUM_CHANNELS_ )
     if torch.cuda.device_count() >= 1:
@@ -74,12 +77,14 @@ if __name__ == "__main__":
         model = nn.DataParallel(model)
 
     # TODO: use soft dice loss as it performs better but BCELoss still works fine https://becominghuman.ai/investigating-focal-and-dice-loss-for-the-kaggle-2018-data-science-bowl-65fb9af4f36c
-    criterion = nn.BCELoss()
+    # criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD( model.parameters(), lr=0.001, momentum=0.9 )
     
     # Network training
     epoch_data = {}
     #TODO: Record the training times for all epoch and per epoch
+    #TODO: Record the population mean and standard deviation for inference
     for epoch in range(_NUM_EPOCHS_):
         epoch_loss = 0.0
         epoch_data[epoch] = {}
@@ -93,6 +98,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()#zero the parameter gradients
 
             # forward pass + backward pass + optimisation
+            #TODO: Remove the sigmoid function from the cnn model and use it only during inference
             outputs = model(inputs)            
             
             loss = criterion( outputs, labels )
@@ -100,7 +106,7 @@ if __name__ == "__main__":
             optimizer.step()
 
             epoch_loss = loss.item()
-            print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
+            # print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
         epoch_data[epoch]["loss"] = epoch_loss
         torch.save({ 
             'epoch': epoch, 'model_dict': model.state_dict(), 
