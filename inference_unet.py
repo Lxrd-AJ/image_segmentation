@@ -44,7 +44,7 @@ if __name__ == "__main__":
     testloader = DataLoader(cityscapes_dataset, batch_size=1, shuffle=True, num_workers=4)
 
     model = UNet( n_classes=len(categories), in_channels=_NUM_CHANNELS_ )
-    checkpoint = torch.load("./checkpoint_epoch_2.pth")
+    checkpoint = torch.load("./checkpoint_epoch_14.pth")
     model.load_state_dict(checkpoint['model_dict'])
     print(f"Training loss was {checkpoint['loss']}")
     model.eval()

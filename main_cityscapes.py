@@ -56,7 +56,7 @@ TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/train"
 _NUM_EPOCHS_ = 20
 _NUM_CHANNELS_= 3
 _IMAGE_SIZE_ = (400,400) 
-_COMPUTE_DEVICE_ = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+_COMPUTE_DEVICE_ = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 torch.set_default_tensor_type(torch.FloatTensor)
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             #TODO: Apply random color changes
             #TODO: Apply random spatial changes (rotation, flip etc)
             ]))
-    trainloader = DataLoader(cityscapes_dataset, batch_size=15, shuffle=True, num_workers=4)
+    trainloader = DataLoader(cityscapes_dataset, batch_size=30, shuffle=True, num_workers=4)
 
     model = UNet( n_classes=len(categories), in_channels=_NUM_CHANNELS_ )
     if torch.cuda.device_count() >= 1:
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # criterion = nn.BCELoss()
     # criterion = nn.CrossEntropyLoss()
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.SGD( model.parameters(), lr=0.001, momentum=0.9 )
+    optimizer = optim.Adam( model.parameters(), lr=0.0001, weight_decay=0.0001 )
     
     # Network training
     epoch_data = {}
