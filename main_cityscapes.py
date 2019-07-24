@@ -73,7 +73,7 @@ if __name__ == "__main__":
             #TODO: Apply random color changes
             #TODO: Apply random spatial changes (rotation, flip etc)
             ]))
-    trainloader = DataLoader(cityscapes_dataset, batch_size=5, shuffle=True, num_workers=4)
+    trainloader = DataLoader(cityscapes_dataset, batch_size=15, shuffle=True, num_workers=4)
 
     model = UNet( n_classes=len(categories), in_channels=_NUM_CHANNELS_ )
     if torch.cuda.device_count() >= 1:
