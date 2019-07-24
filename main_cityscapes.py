@@ -1,7 +1,8 @@
 import torch 
-import numpy as np 
 import torch.optim as optim
 import torch.nn as nn
+import torch.nn.functional as F  
+import numpy as np 
 import os
 import matplotlib.pyplot as plt
 import torchvision
@@ -11,7 +12,7 @@ import psutil
 import time
 from torch.utils.data import DataLoader
 from model.unet_model import UNet
-from ETL.cityscapes_dataset import CityscapesDataset, ToTensor, ToNumpy, Rescale, Resize
+from ETL.cityscapes_dataset import CityscapesDataset, ToTensor, ToNumpy, Normalize, Resize
 from ETL.cityscapes_labels import name2label, labels
 from torch.autograd import Variable  
 from torchvision import transforms, utils
@@ -49,8 +50,8 @@ def show_batch_mask( inputs, tensor , b_idx=4):
 DATA_DIR = "./cityscapes_data"
 ANNOTATION_DATA_DIR = DATA_DIR + "/gtFine"
 IMG_DATA_DIR = DATA_DIR + "/leftImg8bit"
-TRAIN_DIR_IMG = IMG_DATA_DIR + "/train"
-TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/train"
+TRAIN_DIR_IMG = IMG_DATA_DIR + "/val"
+TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/val"
 
 _NUM_EPOCHS_ = 10
 _NUM_CHANNELS_= 3
@@ -66,8 +67,11 @@ if __name__ == "__main__":
     cityscapes_dataset = CityscapesDataset(
         TRAIN_DIR_IMG, TRAIN_DIR_ANN, "gtFine", 
         categories, transform=transforms.Compose([
-            Resize(_IMAGE_SIZE_), Rescale(), ToTensor(),
-            #TODO: Normalise the input image
+            Resize(_IMAGE_SIZE_), 
+            Normalize(), 
+            ToTensor(),            
+            #TODO: Apply random color changes
+            #TODO: Apply random spatial changes (rotation, flip etc)
             ]))
     trainloader = DataLoader(cityscapes_dataset, batch_size=5, shuffle=True, num_workers=4)
 
@@ -76,9 +80,11 @@ if __name__ == "__main__":
         print("Training model on ", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
 
-    # TODO: use soft dice loss as it performs better but BCELoss still works fine https://becominghuman.ai/investigating-focal-and-dice-loss-for-the-kaggle-2018-data-science-bowl-65fb9af4f36c
+    softmax = nn.Softmax2d()
+    # TODO: Decide whether to use soft dice loss as it performs better but BCELoss still works fine https://becominghuman.ai/investigating-focal-and-dice-loss-for-the-kaggle-2018-data-science-bowl-65fb9af4f36c
     # criterion = nn.BCELoss()
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.SGD( model.parameters(), lr=0.001, momentum=0.9 )
     
     # Network training
@@ -89,24 +95,28 @@ if __name__ == "__main__":
         epoch_loss = 0.0
         epoch_data[epoch] = {}
         for i, data in enumerate(trainloader,0):
-            inputs = data["image"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor) #The images are returned as ByteTensor
+            inputs = data["image"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor) #The images are returned as ByteTensor            
             labels = data["segments"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor)
-            color_segmented_img = data["segmented_image"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor)            
-    
+            color_segmented_img = data["segmented_image"].to(_COMPUTE_DEVICE_)#.type(torch.FloatTensor) 
+                     
+            #Debug the running mean and variance of the batch normalisation layers
+            # print("Running mean conv1", model.conv1.conv1[1].running_mean)
+            # print("Running variance conv1", model.conv1.conv1[1].running_var)
+
             #TODO(AJ): Visualise the outputs of the network (log to visdom)
             #TODO(AJ): Visualise the weights of the network (log to visdom/tensorboard etc)
             optimizer.zero_grad()#zero the parameter gradients
 
-            # forward pass + backward pass + optimisation
-            #TODO: Remove the sigmoid function from the cnn model and use it only during inference
-            outputs = model(inputs)            
+            # forward pass + backward pass + optimisation            
+            outputs = model(inputs)                    
             
             loss = criterion( outputs, labels )
             loss.backward()
             optimizer.step()
 
             epoch_loss = loss.item()
-            # print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
+            print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
+
         epoch_data[epoch]["loss"] = epoch_loss
         torch.save({ 
             'epoch': epoch, 'model_dict': model.state_dict(), 
@@ -114,6 +124,15 @@ if __name__ == "__main__":
         }, f"./checkpoint_epoch_{epoch}.pth")
         #See https://pytorch.org/tutorials/beginner/saving_loading_models.html for more info
         print("[Epoch %d] loss: %.2f" % (epoch+1, epoch_loss))
+
+        #Debug: Show the masks from the most previous prediction
+        masks = softmax(outputs)
+        masks = masks[0]
+        for i in range(masks.size()[0]):
+            mask = masks[i].detach().numpy()                 
+            mask = (mask * 255).astype(np.uint8)
+            print(mask)                
+            Image.fromarray(mask).show()
     print("Training complete .....")
 
     with open("epoch_data.json",'w') as file:

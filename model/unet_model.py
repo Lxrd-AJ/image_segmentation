@@ -66,7 +66,7 @@ class UNet( nn.Module ):
         self.is_deconv = True
         self.in_channels = in_channels
         self.is_batchnorm = True
-        self.feature_scale = 4 
+        self.feature_scale = 8 
 
         filters = [int(x/self.feature_scale) for x in [64, 128, 256, 512, 1024]]
 
@@ -118,6 +118,6 @@ class UNet( nn.Module ):
         final = self.final(up1)
 
         final = F.upsample(final, inputs.size()[2:], mode='bilinear',align_corners=True) 
-        final = F.sigmoid(final) 
+        # final = F.sigmoid(final) 
 
         return final 

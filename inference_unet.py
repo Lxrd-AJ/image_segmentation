@@ -31,8 +31,8 @@ _COMPUTE_DEVICE_ = torch.device("cuda:0" if torch.cuda.is_available() else "cpu"
 DATA_DIR = "./cityscapes_data"
 ANNOTATION_DATA_DIR = DATA_DIR + "/gtFine"
 IMG_DATA_DIR = DATA_DIR + "/leftImg8bit"
-TRAIN_DIR_IMG = IMG_DATA_DIR + "/train"
-TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/train"
+TRAIN_DIR_IMG = IMG_DATA_DIR + "/test"
+TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/test"
 
 categories = [label.name for label in labels]
 criterion = nn.BCELoss()

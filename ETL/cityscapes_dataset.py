@@ -9,8 +9,6 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image 
 from pprint import pprint
 
-# class Normalize(object):
-#     #TODO: Add a normalisation operation
 
 class ToTensor(object):
     def __call__(self, sample):
@@ -23,9 +21,11 @@ class ToTensor(object):
         segments_ = torch.from_numpy( np.array(segments) )
         return {"image": image, "segments": segments_, "segmented_image": segmented_image }
 
-class Rescale(object):
+class Normalize(object):
     def __call__(self, sample):
         image, segments, segmented_image = sample["image"], sample["segments"], sample["segmented_image"]
+
+        image = (image - image.mean()) / image.std()
 
         # segments should be a python list of numpy arrays 
         segments_ = []

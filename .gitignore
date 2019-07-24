@@ -2,3 +2,4 @@ cityscapes_data
 dstl-satellite-data
 */**/.pyc
 *.pyc
+*.pth
