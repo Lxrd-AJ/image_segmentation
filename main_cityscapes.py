@@ -50,13 +50,13 @@ def show_batch_mask( inputs, tensor , b_idx=4):
 DATA_DIR = "./cityscapes_data"
 ANNOTATION_DATA_DIR = DATA_DIR + "/gtFine"
 IMG_DATA_DIR = DATA_DIR + "/leftImg8bit"
-TRAIN_DIR_IMG = IMG_DATA_DIR + "/val"
-TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/val"
+TRAIN_DIR_IMG = IMG_DATA_DIR + "/train"
+TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/train"
 
-_NUM_EPOCHS_ = 10
+_NUM_EPOCHS_ = 20
 _NUM_CHANNELS_= 3
 _IMAGE_SIZE_ = (400,400) 
-_COMPUTE_DEVICE_ = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+_COMPUTE_DEVICE_ = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 torch.set_default_tensor_type(torch.FloatTensor)
 
@@ -91,12 +91,13 @@ if __name__ == "__main__":
     epoch_data = {}
     #TODO: Record the training times for all epoch and per epoch
     #TODO: Record the population mean and standard deviation for inference
+    float_type = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     for epoch in range(_NUM_EPOCHS_):
         epoch_loss = 0.0
         epoch_data[epoch] = {}
         for i, data in enumerate(trainloader,0):
-            inputs = data["image"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor) #The images are returned as ByteTensor            
-            labels = data["segments"].to(_COMPUTE_DEVICE_).type(torch.FloatTensor)
+            inputs = data["image"].to(_COMPUTE_DEVICE_).type(float_type) #The images are returned as ByteTensor            
+            labels = data["segments"].to(_COMPUTE_DEVICE_).type(float_type)
             color_segmented_img = data["segmented_image"].to(_COMPUTE_DEVICE_)#.type(torch.FloatTensor) 
                      
             #Debug the running mean and variance of the batch normalisation layers
@@ -115,9 +116,10 @@ if __name__ == "__main__":
             optimizer.step()
 
             epoch_loss = loss.item()
-            print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
+            # print("Training iteration {:} => Loss ({:})".format(i,epoch_loss))
 
         epoch_data[epoch]["loss"] = epoch_loss
+        model = model.cpu() if torch.cuda.is_available() else model
         torch.save({ 
             'epoch': epoch, 'model_dict': model.state_dict(), 
             'optimiser_dict': optimizer.state_dict(), 'loss': epoch_loss 
@@ -126,13 +128,13 @@ if __name__ == "__main__":
         print("[Epoch %d] loss: %.2f" % (epoch+1, epoch_loss))
 
         #Debug: Show the masks from the most previous prediction
-        masks = softmax(outputs)
-        masks = masks[0]
-        for i in range(masks.size()[0]):
-            mask = masks[i].detach().numpy()                 
-            mask = (mask * 255).astype(np.uint8)
-            print(mask)                
-            Image.fromarray(mask).show()
+        # masks = softmax(outputs)
+        # masks = masks[0]
+        # for i in range(masks.size()[0]):
+        #     mask = masks[i].detach().numpy()                 
+        #     mask = (mask * 255).astype(np.uint8)
+        #     print(mask)                
+        #     Image.fromarray(mask).show()
     print("Training complete .....")
 
     with open("epoch_data.json",'w') as file:
