@@ -61,12 +61,13 @@ class UNetUpConv2D( nn.Module ):
 
 
 class UNet( nn.Module ):
-    def __init__(self, n_classes=21, in_channels=3):
+    def __init__(self, n_classes=21, in_channels=3, writer=None):
         super(UNet, self).__init__()
         self.is_deconv = True
         self.in_channels = in_channels
         self.is_batchnorm = True
-        self.feature_scale = 8 
+        self.feature_scale = 2 
+        self.writer = writer
 
         filters = [int(x/self.feature_scale) for x in [64, 128, 256, 512, 1024]]
 
@@ -94,6 +95,7 @@ class UNet( nn.Module ):
 
         # Final layer for producing segmented outputs
         self.final = nn.Conv2d( filters[0], n_classes, 1) # 1 is the kernel size
+        self.softmax = nn.Softmax2d()
 
     def forward(self, inputs):
         c1 = self.conv1(inputs)
@@ -115,9 +117,14 @@ class UNet( nn.Module ):
         up2 = self.up_conv2( c2, up3 ) 
         up1 = self.up_conv1( c1, up2 )
 
-        final = self.final(up1)
-        #TODO: Investigate this last layer, without upsampling, its size is waaaay to small
+        final = self.final(up1)   
+        # torch.Size([3, 2, 212, 612])
+        if self.writer:
+            viz = self.softmax(final).detach() * 255
+            self.writer.add_image("ACTIV_FINAL_0", viz[0,0,:], dataformats="HW")
+            # self.writer.add_image("ACTIV_FINAL_1", final[0,1,:], dataformats="HW")
         final = F.upsample(final, inputs.size()[2:], mode='bilinear',align_corners=True) 
         # final = F.sigmoid(final) 
+        final = self.softmax(final)
 
         return final 
