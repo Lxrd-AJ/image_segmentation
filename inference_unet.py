@@ -31,10 +31,10 @@ _COMPUTE_DEVICE_ = torch.device("cpu")#torch.device("cuda" if torch.cuda.is_avai
 DATA_DIR = "./cityscapes_data"
 ANNOTATION_DATA_DIR = DATA_DIR + "/gtFine"
 IMG_DATA_DIR = DATA_DIR + "/leftImg8bit"
-TRAIN_DIR_IMG = IMG_DATA_DIR + "/test"
-TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/test"
+TRAIN_DIR_IMG = IMG_DATA_DIR + "/train"
+TRAIN_DIR_ANN = ANNOTATION_DATA_DIR + "/train"
 
-categories = [label.name for label in labels]
+categories = [label.name for label in labels if label.name == 'car']
 criterion = nn.BCELoss()
 
 if __name__ == "__main__":    
@@ -43,11 +43,11 @@ if __name__ == "__main__":
         categories, transform=transforms.Compose([Resize(_IMAGE_SIZE_), Normalize(), ToTensor()]))
     testloader = DataLoader(cityscapes_dataset, batch_size=1, shuffle=True, num_workers=4)
 
-    model = UNet( n_classes=len(categories), in_channels=_NUM_CHANNELS_ )
-    checkpoint = torch.load("./checkpoint_epoch_14.pth")
-    model.load_state_dict(checkpoint['model_dict'])
-    print(f"Training loss was {checkpoint['loss']}")
-    model.eval()
+    # model = UNet( n_classes=len(categories), in_channels=_NUM_CHANNELS_ )
+    # checkpoint = torch.load("./checkpoint_epoch_2.pth")
+    # model.load_state_dict(checkpoint['model_dict'])
+    # print(f"Training loss was {checkpoint['loss']}")
+    # model.eval()
 
     softmax = nn.Softmax2d()
 
@@ -66,9 +66,9 @@ if __name__ == "__main__":
             color_seg = Image.fromarray(color_seg)
             # color_seg.show()
 
-            #Show the input image
-            # input_img = ToNumpy()(inputs[0])
-            # Image.fromarray(input_img).show()
+            #Show the input image            
+            input_img = ToNumpy()(inputs[0])
+            Image.fromarray(input_img).show()
 
             # masks = data["segments"][0]
             # for i in range(masks.size()[0]):
@@ -76,13 +76,14 @@ if __name__ == "__main__":
             #     # mask = np.array(mask, dtype=np.uint8)
             #     mask = mask * 255
             #     Image.fromarray(mask).show()   
+
             # img = inputs[0]            
             # img[0] = (img[0] - torch.min(img[0])) / (torch.max(img[0]) - torch.min(img[0]))
             # img[1] = (img[1] - torch.min(img[1])) / (torch.max(img[1]) - torch.min(img[1]))
             # img[2] = (img[2] - torch.min(img[2])) / (torch.max(img[2]) - torch.min(img[2]))
             # inputs[0] = img
 
-            outputs = model(inputs)
+            # outputs = model(inputs)
             
             # print(inputs[0].size())
             
@@ -116,13 +117,13 @@ if __name__ == "__main__":
             #     print(mask)
             #     Image.fromarray(mask).show()
             
-            masks = softmax(outputs)
-            masks = masks[0]
-            for i in range(masks.size()[0]):
-                mask = masks[i].detach().numpy()                 
-                mask = (mask * 255).astype(np.uint8)
-                print(mask)                
-                Image.fromarray(mask).show()
+            # masks = softmax(outputs)
+            # masks = masks[0]
+            # for i in range(masks.size()[0]):
+            #     mask = masks[i].detach().numpy()                 
+            #     mask = (mask * 255).astype(np.uint8)
+            #     print(mask)                
+            #     Image.fromarray(mask).show()
             
             # loss = criterion( outputs, labels )
             # print(loss.item())

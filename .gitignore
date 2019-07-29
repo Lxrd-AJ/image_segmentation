@@ -3,3 +3,4 @@ dstl-satellite-data
 */**/.pyc
 *.pyc
 *.pth
+runs

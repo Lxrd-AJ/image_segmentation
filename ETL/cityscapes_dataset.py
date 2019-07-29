@@ -17,9 +17,10 @@ class ToTensor(object):
         # numpy image: H x W x C
         # torch image: C X H X W
         image = torch.from_numpy( image.transpose((2,0,1)) )
+        # _image = torch.from_numpy( sample["_image"].transpose((2,0,1)) )
         segmented_image = torch.from_numpy( segmented_image.transpose((2,0,1)) )
         segments_ = torch.from_numpy( np.array(segments) )
-        return {"image": image, "segments": segments_, "segmented_image": segmented_image }
+        return {"image": image, "_image": sample["_image"], "segments": segments_, "segmented_image": segmented_image }
 
 class Normalize(object):
     def __call__(self, sample):
@@ -32,7 +33,7 @@ class Normalize(object):
         for segment in segments:
             segments_.append(segment/255)
 
-        return {"image": image, "segments": segments_, "segmented_image": segmented_image }
+        return {"image": image, "_image": sample["_image"], "segments": segments_, "segmented_image": segmented_image }
 
 class Resize(object):
     def __init__(self, img_size):
@@ -48,9 +49,10 @@ class Resize(object):
     Assumes the given sample contains numpy arrays and `img_size` is a tuple 
     """
     def __call__(self, sample):
-        image, segments, segmented_image = sample["image"], sample["segments"], sample["segmented_image"]
+        image, _image, segments, segmented_image = sample["image"], sample["_image"],  sample["segments"], sample["segmented_image"]
 
         image = self.__resize(image)
+        _image = self.__resize(_image)
 
         segments_ = []
         for segment in segments:
@@ -59,7 +61,7 @@ class Resize(object):
 
         segmented_image = self.__resize(segmented_image)
 
-        return {"image": image, "segments": segments_, "segmented_image": segmented_image }
+        return {"image": image, "_image": _image, "segments": segments_, "segmented_image": segmented_image }
 
 
 class ToNumpy(object):
@@ -69,6 +71,7 @@ class ToNumpy(object):
     def __call__(self, torch_image ):
         res = torch_image.numpy().transpose((1,2,0))
         return np.array(res, dtype=np.uint8)
+
 
 class CityscapesDataset(Dataset):
     def __init__(self, train_dir, ann_dir, type, labels, transform):
@@ -84,10 +87,12 @@ class CityscapesDataset(Dataset):
         item = {}
         sample = self.df.iloc[idx]
         item["image"] = np.array(Image.open(sample["img_url"]))
+        item["_image"] = np.array(Image.open(sample["img_url"]))        
         # NB: The colored segmented images have 4 channels i.e RGBA
         item["segmented_image"] = np.array(Image.open(sample["color_seg_url"]))
         masks = []
         cat_segments = cityscapes_etl.parse_annotation_file( sample["ann_polygon_url"])
+        
         for label in self.labels:
             if label in cat_segments["segment"].keys():
                 masks.append(cat_segments["segment"][label])
@@ -95,7 +100,7 @@ class CityscapesDataset(Dataset):
                 sample_size = cat_segments["img_size"]
                 masks.append(np.zeros(sample_size, dtype=np.uint8))
 
-        item["segments"] = masks     
+        item["segments"] = masks
 
         if self.transform:
             item = self.transform(item)

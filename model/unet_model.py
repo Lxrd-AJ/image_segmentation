@@ -116,7 +116,7 @@ class UNet( nn.Module ):
         up1 = self.up_conv1( c1, up2 )
 
         final = self.final(up1)
-
+        #TODO: Investigate this last layer, without upsampling, its size is waaaay to small
         final = F.upsample(final, inputs.size()[2:], mode='bilinear',align_corners=True) 
         # final = F.sigmoid(final) 
 
